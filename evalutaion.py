@@ -3,7 +3,7 @@ from torch import nn, optim
 from torch.utils.data import DataLoader
 import numpy as np
 import random
-from main import make_model, load_cifar10_data, validate, calculate_bound
+from estimation import make_model, load_cifar10_data, validate, calculate_bound
 import argparse
 
 
