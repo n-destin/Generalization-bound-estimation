@@ -1,3 +1,8 @@
+'''
+@Authors: Destin Niyomufasha and Yaoqing Yang
+Deep Learning Generalization and Robustness
+'''
+
 import torch
 from torch import nn, optim
 from torch.utils.data import DataLoader
