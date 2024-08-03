@@ -50,15 +50,11 @@ def validate(model, device, val_loader, criterion):
             sum_correct += pred.eq(target).sum().item()
             sum_loss += len(data) * criterion(output, target).item()
             # compute the margin
-            # *********** Your code starts here ***********
             new_margin = torch.tensor([output[data_index][target[data_index]] - torch.max(torch.cat((output[data_index][:target[data_index]], output[data_index][target[data_index]+1:]))) for data_index in range(len(output))]).to(device)
             margin = torch.cat((margin, new_margin))
-            # *********** Your code ends here *************
     # calculate the 5th percentile margin
-    # *********** Your code starts here ***********
     margin = margin.cpu()
     percentile_margin = np.percentile(margin, 5)
-    # *********** Your code ends here *************
     val_accuracy = sum_correct / len(val_loader.dataset)
     val_loss = sum_loss / len(val_loader.dataset)
     return val_accuracy, val_loss, percentile_margin
@@ -67,7 +63,6 @@ def validate(model, device, val_loader, criterion):
 def load_cifar10_data(split, datadir):
 
     # Data Normalization and Augmentation (random cropping and horizontal flipping)
-    # *********** Your code starts here ***********
     # The mean and standard deviation of the CIFAR-10 dataset: mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
     normalize = transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
     randomCropping = transforms.RandomCrop(size = (32))
@@ -75,7 +70,6 @@ def load_cifar10_data(split, datadir):
 
     train_transform = transforms.Compose([randomCropping, randomFlipping, ToTensor(), normalize])
     val_transform = transforms.Compose([ToTensor(), normalize])
-    # *********** Your code ends here *************
     if split == 'train':
         dataset = datasets.CIFAR10(root=datadir, train=True, download=True, transform=train_transform)
     else:
@@ -99,21 +93,15 @@ class NeuralNetwork(nn.Module):
 
 def make_model(nchannels, nunits, nclasses, checkpoint=None):
     # define the model
-    # *********** Your code starts here ***********
     model = NeuralNetwork(nchannels, nunits, nclasses)
-    # *********** Your code ends here *************
     # load the model from the checkpoint if provided
-    # *********** Your code starts here ***********
     if checkpoint != None:
         model.load_state_dict(torch.load(checkpoint))
-    # *********** Your code ends here *************
     return model
 
 def calculate_bound(model, init_model, device, data_loader, margin):
     # switch to evaluate mode
-    # *********** Your code starts here ***********
     model.eval()
-    # *********** Your code ends here *************
     # build the model using sequential, so model.children() returns sequential type, and getting the layers required iteratiing through it
     init_modules = list([layer for layer in next(init_model.children())])
     modules = list([layer for layer in next(model.children())])
@@ -132,22 +120,16 @@ def calculate_bound(model, init_model, device, data_loader, margin):
         _,S02,_ = init_modules[2].weight.svd()
 
         # Frobenius norm of the weight matrix in the first and second layer
-        # *********** Your code starts here ***********
         Fr1 = torch.norm(modules[0].weight, p = "fro")
         Fr2 = torch.norm(modules[2].weight, p = "fro")
-        # *********** Your code ends here *************
 
         # Difference of final weights to the initial weights in the first and second layer
-        # *********** Your code starts here ***********
         diff1 = init_modules[0].weight - modules[0].weight
         diff2 = init_modules[2].weight - modules[2].weight
-        # *********** Your code ends here *************
 
         # Euclidean distance of the weight matrix in the first and second layer to the initial weight matrix
-        # *********** Your code starts here ***********
         Dist1 = torch.norm(diff1, p = "fro")
         Dist2 = torch.norm(diff2, p = "fro")
-        # *********** Your code ends here *************
 
         # L_{1,infty} norm of the weight matrix in the first and second layer
         L1max1 = modules[0].weight.norm(p=1, dim=1).max()
@@ -173,9 +155,7 @@ def calculate_bound(model, init_model, device, data_loader, margin):
         measure['Spec_L1max_sum'] = measure['Spec_L1max'] + measure['L1max_Spec']
 
         # Compute the Frobenius Distance
-        # *********** Your code starts here ***********
         measure['Dist_Fro'] = Dist1 * Fr2
-        # *********** Your code ends here *************
         # delta is the probability that the generalization bound does not hold
         delta = 0.01
 
@@ -218,18 +198,13 @@ def calculate_bound(model, init_model, device, data_loader, margin):
         measure['L1max bound'] = (R + 3 * math.sqrt(math.log(m / delta))) ** 2
 
         # Compute the Generalization bound as provided in the instruction
-        # *********** Your code starts here ***********
         measure['Your bound'] = (8*math.sqrt(10)*Fr1*Fr2*math.sqrt(data_L2) / margin + 3*math.log(math.sqrt(m/delta)))**2
-        # *********** Your code ends here *************
 
     return measure
 
 
 def main(nchannels, nclasses, datadir, nunits, lr, mt, batchsize, epochs, stopcond, model_name):
     # define the parameters to train your model
-    # *********** Your code starts here ***********
-    # Modufied the code a little bit
-    # *********** Your code ends here *************
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     kwargs = {'num_workers': 1, 'pin_memory': True} if device else {}
@@ -242,10 +217,8 @@ def main(nchannels, nclasses, datadir, nunits, lr, mt, batchsize, epochs, stopco
     init_model = copy.deepcopy(model)
 
     # define loss function (criterion) and optimizer
-    # *********** Your code starts here ***********
     criterion = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.SGD(params = model.parameters(), lr=lr, momentum = mt)
-    # *********** Your code ends here *************
 
     # loading data
     train_dataset = load_cifar10_data('train', datadir)
@@ -258,26 +231,20 @@ def main(nchannels, nclasses, datadir, nunits, lr, mt, batchsize, epochs, stopco
     validation_loss = []
     # training the model
     for epoch in range(0, epochs):
-        # *********** Your code starts here ***********
         train_acc, train_loss = train(model, device, train_loader, criterion, optimizer)
         val_acc, val_loss, val_margin =  validate(model, device, val_loader, criterion)
         validation_margin.append(val_margin)
         validation_loss.append(val_loss)
-        # *********** Your code ends here *************
         print(f'Epoch: {epoch + 1}/{epochs}\t Training loss: {train_loss:.3f}   Training accuracy: {train_acc:.3f}   ',
               f'Validation margin {val_margin:.3f}   Validation accuracy: {val_acc:.3f}')
         # stop training if the cross-entropy loss is less than the stopping condition
         if train_loss < stopcond:
             break
     # save the trained model
-    # *********** Your code starts here ***********
     torch.save(model.state_dict(), model_name)
-    # *********** Your code ends here *************
     # calculate the training error and margin (on Training set) of the learned model
-    # *********** Your code starts here ***********
     train_acc, train_loss, train_margin = validate(model, device, train_loader, criterion)
     val_acc, val_loss, val_margin = validate(model, device, val_loader, criterion)
-    # *********** Your code ends here *************
 
     print(f'=================== Summary ===================\n',
           f'Training loss: {train_loss:.3f}   Training margin {train_margin:.3f}   ',
